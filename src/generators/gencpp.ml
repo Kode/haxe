@@ -8641,8 +8641,8 @@ let generate_source ctx =
    | Some path -> (snd path)
    | _ -> "output" in
 
-   write_build_data common_ctx (common_ctx.file ^ "/Build.xml") !exe_classes !main_deps (!boot_enums@ !boot_classes) !build_xml !extern_src output_name;
-   write_build_options common_ctx (common_ctx.file ^ "/Options.txt") common_ctx.defines.Define.values;
+   (*write_build_data common_ctx (common_ctx.file ^ "/Build.xml") !exe_classes !main_deps (!boot_enums@ !boot_classes) !build_xml !extern_src output_name;*)
+   (*write_build_options common_ctx (common_ctx.file ^ "/Options.txt") common_ctx.defines.Define.values;*)
    if ( not (Common.defined common_ctx Define.NoCompilation) ) then begin
       let t = Timer.timer ["generate";"cpp";"native compilation"] in
       let old_dir = Sys.getcwd() in
