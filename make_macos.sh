@@ -1,2 +1,2 @@
 #!/bin/bash
-make "LIB_PARAMS=-cclib $APPLE_ROOT/usr/local/lib/libpcre.a -cclib -lz"
+make STATICLINK=1 "LIB_PARAMS=/usr/local/opt/zlib/lib/libz.a /usr/local/lib/libpcre.a /usr/local/lib/libmbedtls.a /usr/local/lib/libmbedcrypto.a /usr/local/lib/libmbedx509.a -cclib '-framework Security -framework CoreFoundation'"
