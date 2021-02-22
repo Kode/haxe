@@ -23,7 +23,6 @@ PLATFORM?=unix
 
 DUNE_COMMAND=dune
 HAXE_OUTPUT=haxe
-HAXELIB_OUTPUT=haxelib
 PREBUILD_OUTPUT=prebuild
 EXTENSION=
 LFLAGS=
@@ -72,7 +71,7 @@ ifeq ($(SYSTEM_NAME),Mac)
 	LIB_PARAMS+= -cclib '-framework Security -framework CoreFoundation'
 endif
 
-all: haxe tools
+all: haxe
 
 haxe:
 	$(DUNE_COMMAND) build --workspace dune-workspace.dev src-prebuild/prebuild.exe
@@ -104,23 +103,15 @@ copy_haxetoolkit: /cygdrive/c/HaxeToolkit/haxe/haxe.exe
 	cp $< $@
 endif
 
-# haxelib should depends on haxe, but we don't want to do that...
-haxelib:
-	(cd $(CURDIR)/extra/haxelib_src && $(CURDIR)/$(HAXE_OUTPUT) client.hxml && nekotools boot run.n)
-	mv extra/haxelib_src/run$(EXTENSION) $(HAXELIB_OUTPUT)
-
-tools: haxelib
-
 install: uninstall
 	mkdir -p "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	cp $(HAXE_OUTPUT) $(HAXELIB_OUTPUT) "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	cp $(HAXE_OUTPUT) "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	mkdir -p "$(DESTDIR)$(INSTALL_STD_DIR)"
 	cp -r std/* "$(DESTDIR)$(INSTALL_STD_DIR)"
 
 uninstall:
-	rm -rf $(DESTDIR)$(INSTALL_BIN_DIR)/$(HAXE_OUTPUT) $(DESTDIR)$(INSTALL_BIN_DIR)/$(HAXELIB_OUTPUT)
+	rm -rf $(DESTDIR)$(INSTALL_BIN_DIR)/$(HAXE_OUTPUT)
 	if [ -d "$(DESTDIR)$(INSTALL_LIB_DIR)/lib" ] && find "$(DESTDIR)$(INSTALL_LIB_DIR)/lib" -mindepth 1 -print -quit | grep -q .; then \
-		echo "The local haxelib repo at $(DESTDIR)$(INSTALL_LIB_DIR)/lib will not be removed. Remove it manually if you want."; \
 		find $(DESTDIR)$(INSTALL_LIB_DIR)/ ! -name 'lib' -mindepth 1 -maxdepth 1 -exec rm -rf {} +; \
 	else \
 		rm -rf $(DESTDIR)$(INSTALL_LIB_DIR); \
@@ -150,7 +141,7 @@ package_unix:
 	rm -rf $(PACKAGE_FILE_NAME) $(PACKAGE_FILE_NAME).tar.gz
 	# Copy the package contents to $(PACKAGE_FILE_NAME)
 	mkdir -p $(PACKAGE_FILE_NAME)
-	cp -r $(HAXE_OUTPUT) $(HAXELIB_OUTPUT) std extra/LICENSE.txt extra/CONTRIB.txt extra/CHANGES.txt $(PACKAGE_FILE_NAME)
+	cp -r $(HAXE_OUTPUT) std extra/LICENSE.txt extra/CONTRIB.txt extra/CHANGES.txt $(PACKAGE_FILE_NAME)
 	# archive
 	tar -zcf $(PACKAGE_OUT_DIR)/$(PACKAGE_FILE_NAME)_bin.tar.gz $(PACKAGE_FILE_NAME)
 	rm -r $(PACKAGE_FILE_NAME)
@@ -159,10 +150,6 @@ package_bin: package_$(PLATFORM)
 
 xmldoc:
 	cd extra && \
-	$(CURDIR)/$(HAXELIB_OUTPUT) newrepo && \
-	$(CURDIR)/$(HAXELIB_OUTPUT) git hxcpp  https://github.com/HaxeFoundation/hxcpp   && \
-	$(CURDIR)/$(HAXELIB_OUTPUT) git hxjava https://github.com/HaxeFoundation/hxjava  && \
-	$(CURDIR)/$(HAXELIB_OUTPUT) git hxcs   https://github.com/HaxeFoundation/hxcs    && \
 	PATH="$(CURDIR):$(PATH)" $(CURDIR)/$(HAXE_OUTPUT) doc.hxml
 
 $(INSTALLER_TMP_DIR):
@@ -220,13 +207,10 @@ package_installer_mac: $(INSTALLER_TMP_DIR)/neko-osx64.tar.gz package_unix
 
 # Clean
 
-clean: clean_haxe clean_tools clean_package
+clean: clean_haxe clean_package
 
 clean_haxe:
 	rm -f -r _build $(HAXE_OUTPUT) $(PREBUILD_OUTPUT)
-
-clean_tools:
-	rm -f $(HAXE_OUTPUT) $(PREBUILD_OUTPUT) $(HAXELIB_OUTPUT)
 
 clean_package:
 	rm -rf $(PACKAGE_OUT_DIR)
@@ -241,7 +225,7 @@ FORCE:
 .ml.cmo:
 	$(CC_CMD)
 
-.PHONY: haxe haxelib
+.PHONY: haxe
 
 # our "all:" target doens't work in parallel mode
 .NOTPARALLEL:
