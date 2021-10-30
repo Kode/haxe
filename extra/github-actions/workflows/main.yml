@@ -61,7 +61,7 @@ jobs:
       @import build-mac.yml
 
   freebsd-build:
-    runs-on: macos-latest
+    runs-on: macos-10.15
     env:
       PLATTFORM: freebsd64
       OPAMYES: 1
