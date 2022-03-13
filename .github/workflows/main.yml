@@ -137,7 +137,7 @@ jobs:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Pull
         if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
-        run: git -C haxe_bin pull
+        run: git -C haxe_bin pull --no-rebase
       - name: Push binary again
         if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
@@ -237,7 +237,7 @@ jobs:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Pull
         if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-        run: git -C haxe_bin pull
+        run: git -C haxe_bin pull --no-rebase
       - name: Push binary again
         if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
@@ -366,7 +366,7 @@ jobs:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Pull
         if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
-        run: git -C haxe_bin pull
+        run: git -C haxe_bin pull --no-rebase
       - name: Push binary again
         if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
@@ -437,7 +437,7 @@ jobs:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Pull
         if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-        run: git -C haxe_bin pull
+        run: git -C haxe_bin pull --no-rebase
       - name: Push binary again
         if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
@@ -578,7 +578,7 @@ jobs:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Pull
         if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-        run: git -C haxe_bin pull
+        run: git -C haxe_bin pull --no-rebase
       - name: Push binary again
         if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
