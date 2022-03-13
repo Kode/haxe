@@ -406,7 +406,7 @@ jobs:
             opam switch install 4.11.2
             opam update
             opam pin add haxe . --no-action
-            opam install haxe --deps-only
+            opam create haxe --deps-only
             opam list
             ocamlopt -v
             eval $(opam env)
