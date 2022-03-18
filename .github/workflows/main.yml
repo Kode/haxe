@@ -132,7 +132,7 @@ jobs:
         id: push1
         if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success'
         continue-on-error: true
-        run: git -C haxe_bin push https://Kode-Robbot:${env:ROBBOT_PASS}@github.com/Kode/haxe_bin.git master --tags
+        run: git -C haxe_bin push https://Kode-Robbot:${env:ROBBOT_PASS}@github.com/Kode/haxe_bin.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Pull
@@ -141,7 +141,7 @@ jobs:
       - name: Push binary again
         if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
-        run: git -C haxe_bin push https://Kode-Robbot:${env:ROBBOT_PASS}@github.com/Kode/haxe_bin.git master --tags
+        run: git -C haxe_bin push https://Kode-Robbot:${env:ROBBOT_PASS}@github.com/Kode/haxe_bin.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       
@@ -232,7 +232,7 @@ jobs:
         id: push1
         if: steps.commit.outcome == 'success'
         continue-on-error: true
-        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Pull
@@ -241,7 +241,7 @@ jobs:
       - name: Push binary again
         if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
-        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       
@@ -361,7 +361,7 @@ jobs:
         id: push1
         if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success'
         continue-on-error: true
-        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Pull
@@ -370,7 +370,7 @@ jobs:
       - name: Push binary again
         if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
-        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       
@@ -432,7 +432,7 @@ jobs:
         id: push1
         if: steps.commit.outcome == 'success'
         continue-on-error: true
-        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Pull
@@ -441,7 +441,7 @@ jobs:
       - name: Push binary again
         if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
-        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       
@@ -573,7 +573,7 @@ jobs:
         id: push1
         if: steps.commit.outcome == 'success'
         continue-on-error: true
-        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Pull
@@ -582,7 +582,7 @@ jobs:
       - name: Push binary again
         if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
-        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+        run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       
