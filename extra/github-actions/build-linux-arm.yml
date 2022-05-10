@@ -105,15 +105,15 @@
   id: push1
   if: steps.commit.outcome == 'success'
   continue-on-error: true
-  run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+  run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
   env:
     ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
 - name: Pull
   if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-  run: git -C haxe_bin pull
+  run: git -C haxe_bin pull --no-rebase
 - name: Push binary again
   if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
   continue-on-error: true
-  run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+  run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
   env:
     ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}

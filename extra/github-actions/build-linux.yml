@@ -27,34 +27,36 @@
     opam config exec -- make -s -j`nproc` STATICLINK=1 haxe
     ldd -v ./haxe
 
-- name: Get haxe_bin
-  run: git clone https://github.com/Kode/haxe_bin.git
+- name: Get KhaTools_linux_x64
+  run: git clone https://github.com/Kode/KhaTools_linux_x64.git
 - name: Copy binary
-  run: cp ./haxe haxe_bin/haxe-linux64
+  run: cp ./haxe KhaTools_linux_x64/haxe
 - name: Set name
   run: git config --global user.name "Robbot"
 - name: Set email
   run: git config --global user.email "robbot2019@robdangero.us"
+- name: Add binary
+  run: git -C KhaTools_linux_x64 add haxe
 - name: Commit binary
   id: commit
   continue-on-error: true
-  run: git -C haxe_bin commit -a -m "Update Linux binary to $GITHUB_SHA."
+  run: git -C KhaTools_linux_x64 commit -a -m "Update Haxe binary to $GITHUB_SHA."
 - name: Tag binary
   if: steps.commit.outcome == 'success'
-  run: git -C haxe_bin tag linux_$GITHUB_SHA
+  run: git -C KhaTools_linux_x64 tag haxe_$GITHUB_SHA
 - name: Push binary
   id: push1
   if: steps.commit.outcome == 'success'
   continue-on-error: true
-  run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+  run: git -C KhaTools_linux_x64 push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_linux_x64.git main --tags
   env:
     ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
 - name: Pull
   if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-  run: git -C haxe_bin pull
+  run: git -C KhaTools_linux_x64 pull --no-rebase
 - name: Push binary again
   if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
   continue-on-error: true
-  run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git master --tags
+  run: git -C KhaTools_linux_x64 push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_linux_x64.git main --tags
   env:
     ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
