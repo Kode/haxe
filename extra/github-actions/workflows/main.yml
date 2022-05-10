@@ -82,8 +82,10 @@ jobs:
         include:
           - arch: aarch64
             distro: ubuntu16.04
+            repo: "KhaTools_linux_arm64"
           - arch: armv6
             distro: stretch
+            repo: "KhaTools_linux_arm"
     env:
       PLATFORM: linuxarm
       OPAMYES: 1
