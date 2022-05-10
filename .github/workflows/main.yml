@@ -108,6 +108,7 @@ jobs:
         shell: pwsh
         run: |
           Set-PSDebug -Trace 1
+          git config --global --add safe.directory /cygdrive/d/a/haxe/haxe
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam config exec -- make -s -f Makefile.win -j`nproc` haxe 2>&1')
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && cygcheck ./haxe.exe')
       
@@ -572,7 +573,7 @@ jobs:
         run: git -C ${{ matrix.repo }} commit -a -m "Update Haxe binary to $GITHUB_SHA."
       - name: Tag binary
         if: steps.commit.outcome == 'success'
-        run: git -C ${{ matrix.repo }} tag haxe_${BUILDARCH}_$GITHUB_SHA
+        run: git -C ${{ matrix.repo }} tag haxe_$GITHUB_SHA
       - name: Push binary
         id: push1
         if: steps.commit.outcome == 'success'
