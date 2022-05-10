@@ -53,10 +53,10 @@
     opam config exec -- make -s -j`sysctl -n hw.ncpu` STATICLINK=1 "LIB_PARAMS=/usr/local/lib/libz.a /usr/local/lib/libpcre.a /usr/local/lib/libmbedtls.a /usr/local/lib/libmbedcrypto.a /usr/local/lib/libmbedx509.a -cclib '-framework Security -framework CoreFoundation'" haxe
     otool -L ./haxe
 
-- name: Get haxe_bin
-  run: git clone https://github.com/Kode/haxe_bin.git
+- name: Get KhaTools_macos
+  run: git clone https://github.com/Kode/KhaTools_macos.git
 - name: Copy binary
-  run: cp ./haxe haxe_bin/haxe-osx
+  run: cp ./haxe KhaTools_macos/haxe
 - name: Set name
   run: git config --global user.name "Robbot"
 - name: Set email
@@ -64,25 +64,25 @@
 - name: Commit binary
   id: commit
   continue-on-error: true
-  run: git -C haxe_bin commit -a -m "Update macOS binary to $GITHUB_SHA."
+  run: git -C KhaTools_macos commit -a -m "Update Haxe binary to $GITHUB_SHA."
 - name: Tag binary
   id: tag
   continue-on-error: true
   if: steps.commit.outcome == 'success'
-  run: git -C haxe_bin tag macos_$GITHUB_SHA
+  run: git -C KhaTools_macos tag haxe_$GITHUB_SHA
 - name: Push binary
   id: push1
   if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success'
   continue-on-error: true
-  run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
+  run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos.git main --tags
   env:
     ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
 - name: Pull
   if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
-  run: git -C haxe_bin pull --no-rebase
+  run: git -C KhaTools_macos pull --no-rebase
 - name: Push binary again
   if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
   continue-on-error: true
-  run: git -C haxe_bin push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/haxe_bin.git main --tags
+  run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos.git main --tags
   env:
     ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
