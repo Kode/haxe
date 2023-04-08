@@ -57,7 +57,6 @@
     set -ex
     eval $(opam env)
     opam config exec -- make -s -j`sysctl -n hw.ncpu` STATICLINK=1 "LIB_PARAMS=/usr/local/lib/libz.a /usr/local/lib/libpcre2-8.a /usr/local/lib/libmbedtls.a /usr/local/lib/libmbedcrypto.a /usr/local/lib/libmbedx509.a -cclib '-framework Security -framework CoreFoundation'" haxe
-    ls -l out
     otool -L ./haxe
 
 - name: Get KhaTools_macos
