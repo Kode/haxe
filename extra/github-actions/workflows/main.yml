@@ -88,12 +88,16 @@ jobs:
         run: git clone https://github.com/Kode/KhaTools_linux_x64.git
       - name: Copy binary
         run: cp ./haxe KhaTools_linux_x64/haxe
+      - name: Remove old std
+        run: rm -r KhaTools_linux_x64/std
+      - name: Copy new std
+        run: cp -R std KhaTools_linux_x64/std
       - name: Set name
         run: git config --global user.name "Robbot"
       - name: Set email
         run: git config --global user.email "robbot2019@robdangero.us"
-      - name: Add binary
-        run: git -C KhaTools_linux_x64 add haxe
+      - name: Add everything
+        run: git -C KhaTools_linux_x64 add .
       - name: Commit binary
         id: commit
         continue-on-error: true
