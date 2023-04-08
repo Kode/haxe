@@ -33,6 +33,8 @@ jobs:
           path: D:\.opam
           key: ${{ runner.os }}64-${{ hashFiles('./opam', './libs/') }}
 
+      @import install-neko-windows.yml
+      @import install-nsis.yml
       @import install-ocaml-windows64.yml
       @import install-ocaml-libs-windows.yml
       @import build-windows.yml
@@ -48,6 +50,7 @@ jobs:
           submodules: recursive
 
       @import cache-opam.yml
+      @import install-neko-unix.yml
 
       - name: Install dependencies
         run: |
@@ -143,4 +146,5 @@ jobs:
           submodules: recursive
 
       @import cache-opam.yml
+      @import install-neko-unix.yml
       @import build-mac.yml

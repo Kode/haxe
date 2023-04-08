@@ -34,6 +34,31 @@ jobs:
           path: D:\.opam
           key: ${{ runner.os }}64-${{ hashFiles('./opam', './libs/') }}
 
+      - name: Install Neko from S3
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://build.haxe.org/builds/neko/$env:PLATFORM/neko_latest.zip -OutFile $env:RUNNER_TEMP/neko_latest.zip
+          Expand-Archive $env:RUNNER_TEMP/neko_latest.zip -DestinationPath $env:RUNNER_TEMP
+          $NEKOPATH = Get-ChildItem $env:RUNNER_TEMP/neko-*-*
+          echo "$NEKOPATH" >> $env:GITHUB_PATH
+          echo "NEKOPATH=$NEKOPATH" >> $env:GITHUB_ENV
+
+      - name: Print Neko version
+        run: neko -version 2>&1
+
+      - name: choco install nsis
+        uses: nick-invision/retry@v1
+        with:
+          timeout_minutes: 10
+          max_attempts: 10
+          command: choco install --no-progress nsis.portable --version 3.02 -y
+      - name: choco install things
+        shell: pwsh
+        run: choco install --no-progress curl wget 7zip.portable -y
+      - name: Prepend Chocolatey path
+        shell: pwsh
+        run: Write-Host "::add-path::C:\ProgramData\chocolatey\bin"
+
       - name: Install OCaml
         shell: pwsh
         run: |
@@ -50,7 +75,7 @@ jobs:
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && tar -C / -xvf libmbedtls.tar.xz')
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && tar -xf opam.tar.xz')
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && bash opam${ARCH}/install.sh')
-      
+
       - name: Install OCaml libraries
         if: steps.cache-opam.outputs.cache-hit != 'true'
         shell: pwsh
@@ -62,23 +87,23 @@ jobs:
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam install haxe --deps-only --yes 2>&1')
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam list')
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'ocamlopt -v')
-      
+
       - name: Expose mingw dll files
         shell: pwsh
         run: Write-Host "::add-path::${env:CYG_ROOT}/usr/$($env:MINGW_ARCH)-w64-mingw32/sys-root/mingw/bin"
-      
+
       # required to be able to retrieve the revision
       - name: Mark directory as safe
         shell: pwsh
         run: |
           Set-PSDebug -Trace 1
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'git config --global --add safe.directory "$OLDPWD"')
-      
+
       - name: Set ADD_REVISION=1 for non-release
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         shell: pwsh
         run: echo "ADD_REVISION=1" >> $Env:GITHUB_ENV
-      
+
       - name: Build Haxe
         shell: pwsh
         run: |
@@ -88,7 +113,7 @@ jobs:
           dir out
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && cygcheck ./haxe.exe')
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && ls ./out')
-      
+
       - name: Get KhaTools_windows_x64
         run: git clone https://github.com/Kode/KhaTools_windows_x64.git
       - name: Copy binary
@@ -126,7 +151,7 @@ jobs:
         run: git -C KhaTools_windows_x64 push https://Kode-Robbot:${env:ROBBOT_PASS}@github.com/Kode/KhaTools_windows_x64.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
-      
+
 
   linux-build:
     runs-on: ubuntu-20.04
@@ -144,7 +169,24 @@ jobs:
         with:
           path: ~/.opam/
           key: ${{ runner.os }}-${{ hashFiles('./opam', './libs/') }}-2
-      
+
+      - name: Install Neko from S3
+        run: |
+          set -ex
+
+          curl -sSL https://build.haxe.org/builds/neko/$PLATFORM/neko_latest.tar.gz -o $RUNNER_TEMP/neko_latest.tar.gz
+          tar -xf $RUNNER_TEMP/neko_latest.tar.gz -C $RUNNER_TEMP
+          NEKOPATH=`echo $RUNNER_TEMP/neko-*-*`
+          sudo mkdir -p /usr/local/bin
+          sudo mkdir -p /usr/local/lib/neko
+          sudo ln -s $NEKOPATH/{neko,nekoc,nekoml,nekotools}  /usr/local/bin/
+          sudo ln -s $NEKOPATH/libneko.*                      /usr/local/lib/
+          sudo ln -s $NEKOPATH/*.ndll                         /usr/local/lib/neko/
+          echo "NEKOPATH=$NEKOPATH" >> $GITHUB_ENV
+
+      - name: Print Neko version
+        run: neko -version 2>&1
+
 
       - name: Install dependencies
         run: |
@@ -245,7 +287,24 @@ jobs:
         with:
           path: ~/.opam/
           key: ${{ runner.os }}-${{ hashFiles('./opam', './libs/') }}-2
-      
+
+      - name: Install Neko from S3
+        run: |
+          set -ex
+
+          curl -sSL https://build.haxe.org/builds/neko/$PLATFORM/neko_latest.tar.gz -o $RUNNER_TEMP/neko_latest.tar.gz
+          tar -xf $RUNNER_TEMP/neko_latest.tar.gz -C $RUNNER_TEMP
+          NEKOPATH=`echo $RUNNER_TEMP/neko-*-*`
+          sudo mkdir -p /usr/local/bin
+          sudo mkdir -p /usr/local/lib/neko
+          sudo ln -s $NEKOPATH/{neko,nekoc,nekoml,nekotools}  /usr/local/bin/
+          sudo ln -s $NEKOPATH/libneko.*                      /usr/local/lib/
+          sudo ln -s $NEKOPATH/*.ndll                         /usr/local/lib/neko/
+          echo "NEKOPATH=$NEKOPATH" >> $GITHUB_ENV
+
+      - name: Print Neko version
+        run: neko -version 2>&1
+
       - name: Install dependencies
         env:
           # For compatibility with macOS 10.13
@@ -279,8 +338,8 @@ jobs:
           ./configure --enable-unicode --enable-pcre2-8 --enable-pcre2-16 --enable-pcre2-32 --enable-unicode-properties --enable-pcre2grep-libz --enable-pcre2grep-libbz2 --enable-jit
           make && make install
           cd ..
-      
-      
+
+
       - name: Install OCaml libraries
         if: steps.cache-opam.outputs.cache-hit != 'true'
         run: |
@@ -295,11 +354,11 @@ jobs:
           opam install haxe --deps-only --assume-depexts
           opam list
           ocamlopt -v
-      
+
       - name: Set ADD_REVISION=1 for non-release
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         run: echo "ADD_REVISION=1" >> $GITHUB_ENV
-      
+
       - name: Build Haxe
         run: |
           set -ex
@@ -307,7 +366,7 @@ jobs:
           opam config exec -- make -s -j`sysctl -n hw.ncpu` STATICLINK=1 "LIB_PARAMS=/usr/local/lib/libz.a /usr/local/lib/libpcre2-8.a /usr/local/lib/libmbedtls.a /usr/local/lib/libmbedcrypto.a /usr/local/lib/libmbedx509.a -cclib '-framework Security -framework CoreFoundation'" haxe
           ls -l out
           otool -L ./haxe
-      
+
       - name: Get KhaTools_macos
         run: git clone https://github.com/Kode/KhaTools_macos.git
       - name: Copy binary
@@ -347,4 +406,4 @@ jobs:
         run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
-      
+
