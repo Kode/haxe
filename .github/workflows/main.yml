@@ -117,6 +117,7 @@ jobs:
       - name: Copy binary
         run: copy haxe.exe KhaTools_windows_x64\haxe.exe
       - name: Copy new std
+        continue-on-error: true
         run: robocopy std KhaTools_windows_x64\std /mir
       - name: Set name
         run: git config --global user.name "Robbot"
