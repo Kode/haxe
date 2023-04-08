@@ -133,9 +133,6 @@ jobs:
           - arch: aarch64
             distro: ubuntu20.04
             repo: "KhaTools_linux_arm64"
-          - arch: armv6
-            distro: ubuntu20.04
-            repo: "KhaTools_linux_arm"
     env:
       PLATFORM: linuxarm
       OPAMYES: 1
