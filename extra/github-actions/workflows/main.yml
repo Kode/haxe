@@ -122,55 +122,29 @@ jobs:
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
 
-  linux-arm64:
-    runs-on: ubuntu-20.04
-    permissions:
-      packages: write
+  linux-arm-build:
+    runs-on: ubuntu-18.04
+    name: Build on ${{ matrix.distro }} ${{ matrix.arch }}
+
+    # Run steps for both armv6 and aarch64
+    strategy:
+      matrix:
+        include:
+          - arch: aarch64
+            distro: ubuntu16.04
+            repo: "KhaTools_linux_arm64"
+          - arch: armv6
+            distro: stretch
+            repo: "KhaTools_linux_arm"
     env:
-      FORCE_COLOR: 1
+      PLATFORM: linuxarm
+      OPAMYES: 1
     steps:
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install Earthly
-        run: sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.6.13/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly && /usr/local/bin/earthly bootstrap --with-autocomplete'
-
-      - name: Set up QEMU
-        id: qemu
-        uses: docker/setup-qemu-action@v1
-        with:
-            image: tonistiigi/binfmt:latest
-            platforms: all
-
       - uses: actions/checkout@main
         with:
           submodules: recursive
 
-      - name: Set CONTAINER_ vars
-        run: |
-          echo "CONTAINER_REG=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV;
-          echo "CONTAINER_TAG=$(echo ${{ github.ref_name }} | sed -e 's/[^A-Za-z0-9\.]/-/g')" >> $GITHUB_ENV;
-
-      - name: Build devcontainer
-        run: earthly --platform=linux/arm64 +devcontainer --IMAGE_NAME="ghcr.io/${CONTAINER_REG}_devcontainer" --IMAGE_TAG="${CONTAINER_TAG}-arm64" --IMAGE_CACHE="ghcr.io/haxefoundation/haxe_devcontainer:development-arm64"
-        env:
-          EARTHLY_PUSH: "${{ github.event_name == 'push' }}"
-          EARTHLY_USE_INLINE_CACHE: true
-          EARTHLY_SAVE_INLINE_CACHE: true
-
-      - name: Set ADD_REVISION=1 for non-release
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        run: echo "ADD_REVISION=1" >> $GITHUB_ENV
-
-      - name: Build
-        run: earthly --platform=linux/arm64 +build --ADD_REVISION="$ADD_REVISION" --SET_SAFE_DIRECTORY="true"
-        env:
-          EARTHLY_PUSH: "${{ github.event_name == 'push' }}"
-          EARTHLY_REMOTE_CACHE: "ghcr.io/${{env.CONTAINER_REG}}_cache:build-${{env.CONTAINER_TAG}}-arm64"
+      @import build-linux-arm.yml
 
   mac-build:
     runs-on: macos-latest
