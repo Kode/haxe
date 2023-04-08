@@ -1,0 +1,59 @@
+- name: Apply dune patch for FreeBSD
+  run: git apply extra/github-actions/patches/dune.patch
+
+- name: Set ADD_REVISION=1 for non-release
+  if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  run: echo "ADD_REVISION=1" >> $GITHUB_ENV
+
+- name: Build in FreeBSD VM
+  id: build
+  uses: vmactions/freebsd-vm@v0.1.5
+  with:
+    envs: 'OPAMYES'
+    usesh: true
+    mem: 2048
+    prepare: pkg install -y ocaml ocaml-opam p5-string-shellquote p5-IPC-System-Simple pkgconf neko pcre gmake lzlib bash
+    run: |
+      set -ex
+      opam init # --disable-sandboxing
+      opam switch create 4.11.2
+      opam update
+      opam pin add haxe . --no-action
+      opam install haxe --deps-only
+      opam list
+      ocamlopt -v
+      eval $(opam env)
+      gmake -s -j3 STATICLINK=1 haxe
+      ldd -v ./haxe
+
+- name: Get KhaTools_freebsd_x64
+  run: git clone https://github.com/Kode/KhaTools_freebsd_x64.git
+- name: Copy binary
+  run: cp ./haxe KhaTools_freebsd_x64/haxe
+- name: Set name
+  run: git config --global user.name "Robbot"
+- name: Set email
+  run: git config --global user.email "robbot2019@robdangero.us"
+- name: Commit binary
+  id: commit
+  continue-on-error: true
+  run: git -C KhaTools_freebsd_x64 commit -a -m "Update Haxe binary to $GITHUB_SHA."
+- name: Tag binary
+  if: steps.commit.outcome == 'success'
+  run: git -C KhaTools_freebsd_x64 tag haxe_$GITHUB_SHA
+- name: Push binary
+  id: push1
+  if: steps.commit.outcome == 'success'
+  continue-on-error: true
+  run: git -C KhaTools_freebsd_x64 push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_freebsd_x64.git main --tags
+  env:
+    ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
+- name: Pull
+  if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
+  run: git -C KhaTools_freebsd_x64 pull --no-rebase
+- name: Push binary again
+  if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
+  continue-on-error: true
+  run: git -C KhaTools_freebsd_x64 push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_freebsd_x64.git main --tags
+  env:
+    ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}

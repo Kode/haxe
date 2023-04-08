@@ -24,8 +24,7 @@ class Main {
 				final path = reg.matched(2);
 				final template = File.getContent('./$path');
 				final lines = template.split("\n");
-				for (i in 0...lines.length)
-					lines[i] = (spaces + lines[i]).rtrim();
+				for (i in 0...lines.length) lines[i] = spaces + lines[i];
 				lines.join("\n");
 			});
 

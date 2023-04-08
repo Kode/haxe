@@ -1,0 +1,13 @@
+diff --git a/dune b/dune
+index 2ac21fc49..8bc5065ed 100644
+--- a/dune
++++ b/dune
+@@ -1 +1,7 @@
++(env
++        (release
++                (ocamlopt_flags (:standard -ccopt -L/usr/local/lib))
++                (c_flags ("-I/usr/local/include"))
++        )
++)
+ (data_only_dirs extra lib std tests)
+\ No newline at end of file
