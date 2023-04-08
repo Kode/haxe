@@ -5,22 +5,13 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  cancel:
-    name: "Cancel previous runs"
-    runs-on: ubuntu-18.04
-    timeout-minutes: 3
-    steps:
-      - uses: styfle/cancel-workflow-action@0.3.1
-        with:
-          workflow_id: 1447568
-          access_token: ${{ github.token }}
-
   windows64-build:
     runs-on: windows-latest
     env:
       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       PLATFORM: windows64
       OPAMYES: 1
+      OPAMROOT: D:\.opam
       CYG_MIRROR: http://mirrors.kernel.org/sourceware/cygwin/
       ARCH: 64
       MINGW_ARCH: x86_64
@@ -31,33 +22,46 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Neko using snapshot from S3 (Unix)
-        if: ${{ !startsWith(env.PLATFORM, 'windows') }}
+      - name: Use GNU Tar from msys
         run: |
-          set -ex
-      
-          curl -sSL https://build.haxe.org/builds/neko/$PLATFORM/neko_latest.tar.gz -o $RUNNER_TEMP/neko_latest.tar.gz
-          tar -xf $RUNNER_TEMP/neko_latest.tar.gz -C $RUNNER_TEMP
-          NEKOPATH=`echo $RUNNER_TEMP/neko-*-*`
-          sudo mkdir -p /usr/local/bin
-          sudo mkdir -p /usr/local/lib/neko
-          sudo ln -s $NEKOPATH/{neko,nekoc,nekoml,nekotools}  /usr/local/bin/
-          sudo ln -s $NEKOPATH/libneko.*                      /usr/local/lib/
-          sudo ln -s $NEKOPATH/*.ndll                         /usr/local/lib/neko/
-          echo "NEKOPATH=$NEKOPATH" >> $GITHUB_ENV
-      
-      - name: Install Neko using snapshot from S3 (Windows)
-        if: ${{ startsWith(env.PLATFORM, 'windows') }}
+          echo "C:\msys64\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          rm C:\msys64\usr\bin\bash.exe
+
+      - name: Cache opam
+        id: cache-opam
+        uses: actions/cache@v3.0.11
+        with:
+          path: D:\.opam
+          key: ${{ runner.os }}64-${{ hashFiles('./opam', './libs/') }}
+
+      - name: Install OCaml
         shell: pwsh
         run: |
-          Invoke-WebRequest https://build.haxe.org/builds/neko/$env:PLATFORM/neko_latest.zip -OutFile $env:RUNNER_TEMP/neko_latest.zip
-          Expand-Archive $env:RUNNER_TEMP/neko_latest.zip -DestinationPath $env:RUNNER_TEMP
-          $NEKOPATH = Get-ChildItem $env:RUNNER_TEMP/neko-*-*
-          echo "$NEKOPATH" >> $env:GITHUB_PATH
-          echo "NEKOPATH=$NEKOPATH" >> $env:GITHUB_ENV
+          Set-PSDebug -Trace 1
+          curl.exe -fsSL -o cygwin-setup.exe --retry 3 $($env:CYGWIN_SETUP)
+          Start-Process -FilePath "cygwin-setup.exe" -ArgumentList "-B -q -R $($env:CYG_ROOT) -l C:/tmp -s $($env:CYG_MIRROR) -P default -P make -P git -P zlib-devel -P rsync -P patch -P diffutils -P curl -P unzip -P tar -P m4 -P perl -P libpcre2-devel -P mbedtls-devel -P mingw64-$($env:MINGW_ARCH)-zlib -P mingw64-$($env:MINGW_ARCH)-gcc-core -P mingw64-$($env:MINGW_ARCH)-pcre2" -Wait -RedirectStandardOutput cygwin-setup-out.txt
+          Get-Content cygwin-setup-out.txt
+          curl.exe -fsSL -o "opam.tar.xz" --retry 3 https://github.com/fdopen/opam-repository-mingw/releases/download/0.0.0.2/opam$($env:ARCH).tar.xz
+          curl.exe -fsSL -o "libmbedtls.tar.xz" --retry 3 https://github.com/Simn/mingw64-mbedtls/releases/download/2.16.3/mingw64-$($env:MINGW_ARCH)-mbedtls-2.16.3-1.tar.xz
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'curl -L https://cpanmin.us | perl - App::cpanminus')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cpanm IPC::System::Simple module')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cpanm String::ShellQuote')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'echo "$OLDPWD"')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && tar -C / -xvf libmbedtls.tar.xz')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && tar -xf opam.tar.xz')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && bash opam${ARCH}/install.sh')
       
-      - name: Print Neko version
-        run: neko -version 2>&1
+      - name: Install OCaml libraries
+        if: steps.cache-opam.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          Set-PSDebug -Trace 1
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam init mingw "https://github.com/fdopen/opam-repository-mingw.git#opam2" --comp 4.07.0+mingw${ARCH}c --switch 4.07.0+mingw${ARCH}c --auto-setup --yes 2>&1')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam update --yes 2>&1')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam pin add haxe . --kind=path --no-action --yes 2>&1')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam install haxe --deps-only --yes 2>&1')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam list')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'ocamlopt -v')
       
       - name: Expose mingw dll files
         shell: pwsh
@@ -125,7 +129,7 @@ jobs:
       
 
   linux-build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     env:
       PLATFORM: linux64
       OPAMYES: 1
@@ -134,43 +138,24 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Neko using snapshot from S3 (Unix)
-        if: ${{ !startsWith(env.PLATFORM, 'windows') }}
-        run: |
-          set -ex
+      - name: Cache opam
+        id: cache-opam
+        uses: actions/cache@v3.0.11
+        with:
+          path: ~/.opam/
+          key: ${{ runner.os }}-${{ hashFiles('./opam', './libs/') }}-2
       
-          curl -sSL https://build.haxe.org/builds/neko/$PLATFORM/neko_latest.tar.gz -o $RUNNER_TEMP/neko_latest.tar.gz
-          tar -xf $RUNNER_TEMP/neko_latest.tar.gz -C $RUNNER_TEMP
-          NEKOPATH=`echo $RUNNER_TEMP/neko-*-*`
-          sudo mkdir -p /usr/local/bin
-          sudo mkdir -p /usr/local/lib/neko
-          sudo ln -s $NEKOPATH/{neko,nekoc,nekoml,nekotools}  /usr/local/bin/
-          sudo ln -s $NEKOPATH/libneko.*                      /usr/local/lib/
-          sudo ln -s $NEKOPATH/*.ndll                         /usr/local/lib/neko/
-          echo "NEKOPATH=$NEKOPATH" >> $GITHUB_ENV
-      
-      - name: Install Neko using snapshot from S3 (Windows)
-        if: ${{ startsWith(env.PLATFORM, 'windows') }}
-        shell: pwsh
-        run: |
-          Invoke-WebRequest https://build.haxe.org/builds/neko/$env:PLATFORM/neko_latest.zip -OutFile $env:RUNNER_TEMP/neko_latest.zip
-          Expand-Archive $env:RUNNER_TEMP/neko_latest.zip -DestinationPath $env:RUNNER_TEMP
-          $NEKOPATH = Get-ChildItem $env:RUNNER_TEMP/neko-*-*
-          echo "$NEKOPATH" >> $env:GITHUB_PATH
-          echo "NEKOPATH=$NEKOPATH" >> $env:GITHUB_ENV
-      
-      - name: Print Neko version
-        run: neko -version 2>&1
-      
+
       - name: Install dependencies
         run: |
           set -ex
           sudo add-apt-repository ppa:avsm/ppa -y # provides OPAM 2
           sudo add-apt-repository ppa:haxe/ocaml -y # provides newer version of mbedtls
           sudo apt-get update -qqy
-          sudo apt-get install -qqy ocaml-nox camlp5 opam libpcre3-dev zlib1g-dev libgtk2.0-dev libmbedtls-dev ninja-build libstring-shellquote-perl
-      
+          sudo apt-get install -qqy ocaml-nox camlp5 opam libpcre2-dev zlib1g-dev libgtk2.0-dev libmbedtls-dev ninja-build libstring-shellquote-perl libipc-system-simple-perl
+
       - name: Install OCaml libraries
+        if: steps.cache-opam.outputs.cache-hit != 'true'
         run: |
           set -ex
           opam init # --disable-sandboxing
@@ -179,56 +164,69 @@ jobs:
           opam install haxe --deps-only --assume-depexts
           opam list
           ocamlopt -v
-      
+
       - name: Set ADD_REVISION=1 for non-release
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         run: echo "ADD_REVISION=1" >> $GITHUB_ENV
-      
+
       - name: Build Haxe
         run: |
           set -ex
           eval $(opam env)
           opam config exec -- make -s -j`nproc` STATICLINK=1 haxe
+          make -s package_unix
+          ls -l out
           ldd -v ./haxe
-      
-      - name: Get KhaTools_linux_x64
-        run: git clone https://github.com/Kode/KhaTools_linux_x64.git
-      - name: Copy binary
-        run: cp ./haxe KhaTools_linux_x64/haxe
-      - name: Remove old std
-        run: rm -r KhaTools_linux_x64/std
-      - name: Copy new std
-        run: cp -R std KhaTools_linux_x64/std
-      - name: Set name
-        run: git config --global user.name "Robbot"
-      - name: Set email
-        run: git config --global user.email "robbot2019@robdangero.us"
-      - name: Add everything
-        run: git -C KhaTools_linux_x64 add .
-      - name: Commit binary
-        id: commit
-        continue-on-error: true
-        run: git -C KhaTools_linux_x64 commit -a -m "Update Haxe binary to $GITHUB_SHA."
-      - name: Tag binary
-        if: steps.commit.outcome == 'success'
-        run: git -C KhaTools_linux_x64 tag haxe_$GITHUB_SHA
-      - name: Push binary
-        id: push1
-        if: steps.commit.outcome == 'success'
-        continue-on-error: true
-        run: git -C KhaTools_linux_x64 push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_linux_x64.git main --tags
+
+  linux-arm64:
+    runs-on: ubuntu-20.04
+    permissions:
+      packages: write
+    env:
+      FORCE_COLOR: 1
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Earthly
+        run: sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.6.13/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly && /usr/local/bin/earthly bootstrap --with-autocomplete'
+
+      - name: Set up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v1
+        with:
+            image: tonistiigi/binfmt:latest
+            platforms: all
+
+      - uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Set CONTAINER_ vars
+        run: |
+          echo "CONTAINER_REG=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV;
+          echo "CONTAINER_TAG=$(echo ${{ github.ref_name }} | sed -e 's/[^A-Za-z0-9\.]/-/g')" >> $GITHUB_ENV;
+
+      - name: Build devcontainer
+        run: earthly --platform=linux/arm64 +devcontainer --IMAGE_NAME="ghcr.io/${CONTAINER_REG}_devcontainer" --IMAGE_TAG="${CONTAINER_TAG}-arm64" --IMAGE_CACHE="ghcr.io/haxefoundation/haxe_devcontainer:development-arm64"
         env:
-          ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
-      - name: Pull
-        if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-        run: git -C KhaTools_linux_x64 pull --no-rebase
-      - name: Push binary again
-        if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-        continue-on-error: true
-        run: git -C KhaTools_linux_x64 push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_linux_x64.git main --tags
+          EARTHLY_PUSH: "${{ github.event_name == 'push' }}"
+          EARTHLY_USE_INLINE_CACHE: true
+          EARTHLY_SAVE_INLINE_CACHE: true
+
+      - name: Set ADD_REVISION=1 for non-release
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: echo "ADD_REVISION=1" >> $GITHUB_ENV
+
+      - name: Build
+        run: earthly --platform=linux/arm64 +build --ADD_REVISION="$ADD_REVISION" --SET_SAFE_DIRECTORY="true"
         env:
-          ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
-      
+          EARTHLY_PUSH: "${{ github.event_name == 'push' }}"
+          EARTHLY_REMOTE_CACHE: "ghcr.io/${{env.CONTAINER_REG}}_cache:build-${{env.CONTAINER_TAG}}-arm64"
 
   mac-build:
     runs-on: macos-latest
@@ -241,33 +239,12 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Neko using snapshot from S3 (Unix)
-        if: ${{ !startsWith(env.PLATFORM, 'windows') }}
-        run: |
-          set -ex
-      
-          curl -sSL https://build.haxe.org/builds/neko/$PLATFORM/neko_latest.tar.gz -o $RUNNER_TEMP/neko_latest.tar.gz
-          tar -xf $RUNNER_TEMP/neko_latest.tar.gz -C $RUNNER_TEMP
-          NEKOPATH=`echo $RUNNER_TEMP/neko-*-*`
-          sudo mkdir -p /usr/local/bin
-          sudo mkdir -p /usr/local/lib/neko
-          sudo ln -s $NEKOPATH/{neko,nekoc,nekoml,nekotools}  /usr/local/bin/
-          sudo ln -s $NEKOPATH/libneko.*                      /usr/local/lib/
-          sudo ln -s $NEKOPATH/*.ndll                         /usr/local/lib/neko/
-          echo "NEKOPATH=$NEKOPATH" >> $GITHUB_ENV
-      
-      - name: Install Neko using snapshot from S3 (Windows)
-        if: ${{ startsWith(env.PLATFORM, 'windows') }}
-        shell: pwsh
-        run: |
-          Invoke-WebRequest https://build.haxe.org/builds/neko/$env:PLATFORM/neko_latest.zip -OutFile $env:RUNNER_TEMP/neko_latest.zip
-          Expand-Archive $env:RUNNER_TEMP/neko_latest.zip -DestinationPath $env:RUNNER_TEMP
-          $NEKOPATH = Get-ChildItem $env:RUNNER_TEMP/neko-*-*
-          echo "$NEKOPATH" >> $env:GITHUB_PATH
-          echo "NEKOPATH=$NEKOPATH" >> $env:GITHUB_ENV
-      
-      - name: Print Neko version
-        run: neko -version 2>&1
+      - name: Cache opam
+        id: cache-opam
+        uses: actions/cache@v3.0.11
+        with:
+          path: ~/.opam/
+          key: ${{ runner.os }}-${{ hashFiles('./opam', './libs/') }}-2
       
       - name: Install dependencies
         env:
@@ -368,230 +345,6 @@ jobs:
         if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
         continue-on-error: true
         run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos.git main --tags
-        env:
-          ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
-      
-
-  freebsd-build:
-    runs-on: macos-10.15
-    env:
-      PLATTFORM: freebsd64
-      OPAMYES: 1
-    steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-
-      - name: Apply dune patch for FreeBSD
-        run: git apply extra/github-actions/patches/dune.patch
-      
-      - name: Set ADD_REVISION=1 for non-release
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        run: echo "ADD_REVISION=1" >> $GITHUB_ENV
-      
-      - name: Build in FreeBSD VM
-        id: build
-        uses: vmactions/freebsd-vm@v0.1.5
-        with:
-          envs: 'OPAMYES'
-          usesh: true
-          mem: 2048
-          prepare: pkg install -y ocaml ocaml-opam p5-string-shellquote p5-IPC-System-Simple pkgconf neko pcre gmake lzlib bash
-          run: |
-            set -ex
-            opam init # --disable-sandboxing
-            opam switch create 4.11.2
-            opam update
-            opam pin add haxe . --no-action
-            opam install haxe --deps-only
-            opam list
-            ocamlopt -v
-            eval $(opam env)
-            gmake -s -j3 STATICLINK=1 haxe
-            ldd -v ./haxe
-      
-      - name: Get KhaTools_freebsd_x64
-        run: git clone https://github.com/Kode/KhaTools_freebsd_x64.git
-      - name: Copy binary
-        run: cp ./haxe KhaTools_freebsd_x64/haxe
-      - name: Remove old std
-        run: rm -r KhaTools_freebsd_x64/std
-      - name: Copy new std
-        run: cp -R std KhaTools_freebsd_x64/std
-      - name: Set name
-        run: git config --global user.name "Robbot"
-      - name: Set email
-        run: git config --global user.email "robbot2019@robdangero.us"
-      - name: Add everything
-        run: git -C KhaTools_freebsd_x64 add .
-      - name: Commit binary
-        id: commit
-        continue-on-error: true
-        run: git -C KhaTools_freebsd_x64 commit -a -m "Update Haxe binary to $GITHUB_SHA."
-      - name: Tag binary
-        if: steps.commit.outcome == 'success'
-        run: git -C KhaTools_freebsd_x64 tag haxe_$GITHUB_SHA
-      - name: Push binary
-        id: push1
-        if: steps.commit.outcome == 'success'
-        continue-on-error: true
-        run: git -C KhaTools_freebsd_x64 push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_freebsd_x64.git main --tags
-        env:
-          ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
-      - name: Pull
-        if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-        run: git -C KhaTools_freebsd_x64 pull --no-rebase
-      - name: Push binary again
-        if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-        continue-on-error: true
-        run: git -C KhaTools_freebsd_x64 push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_freebsd_x64.git main --tags
-        env:
-          ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
-      
-
-  linux-arm-build:
-    runs-on: ubuntu-18.04
-    name: Build on ${{ matrix.distro }} ${{ matrix.arch }}
-
-    # Run steps for both armv6 and aarch64
-    strategy:
-      matrix:
-        include:
-          - arch: aarch64
-            distro: ubuntu16.04
-            repo: "KhaTools_linux_arm64"
-          - arch: armv6
-            distro: stretch
-            repo: "KhaTools_linux_arm"
-    env:
-      PLATFORM: linuxarm
-      OPAMYES: 1
-    steps:
-      - uses: actions/checkout@main
-        with:
-          submodules: recursive
-
-      - name: Set ADD_REVISION=1 for non-release
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        run: echo "ADD_REVISION=1" >> $GITHUB_ENV
-      
-      - uses: uraimo/run-on-arch-action@v2.0.9
-        name: Build artifact
-        id: build
-        env:
-          OPAMYES: 1
-        with:
-          arch: ${{ matrix.arch }}
-          distro: ${{ matrix.distro }}
-      
-          # Not required, but speeds up builds
-          githubToken: ${{ github.token }}
-      
-          # Create an artifacts directory
-          setup: |
-            mkdir -p "${PWD}/artifacts"
-      
-          # Mount the artifacts directory as /artifacts in the container
-          dockerRunArgs: |
-            --volume "${PWD}/artifacts:/artifacts"
-      
-          # Pass the correct artifact name
-          env: | # YAML, but pipe character is necessary
-            artifact_name: haxe-linux-${{ matrix.arch }}
-            arch: ${{ matrix.arch }}
-      
-          # The shell to run commands with in the container
-          shell: /bin/bash
-      
-          # Install some dependencies in the container. This speeds up builds if
-          # you are also using githubToken. Any dependencies installed here will
-          # be part of the container image that gets cached, so subsequent
-          # builds don't have to re-install them. The image layer is cached
-          # publicly in your project's package repository, so it is vital that
-          # no secrets are present in the container state or logs.
-          install: |
-            set -ex
-            cd ~
-            apt-get update -y -q
-            apt-get upgrade -y -q
-            apt-get install -y -q build-essential m4 unzip libpcre3-dev zlib1g-dev neko git pkg-config libipc-system-simple-perl libstring-shellquote-perl wget cmake python3
-            # Installing OPAM
-            apt-get install -y -q ocaml \
-              && wget https://github.com/ocaml/opam/releases/download/2.0.8/opam-full-2.0.8.tar.gz \
-              && tar xvf opam-full-2.0.8.tar.gz \
-              && cd opam-full-2.0.8 \
-              && ./configure \
-              && make lib-ext \
-              && make \
-              && make install \
-              && cd .. \
-              && rm -rf opam-full*
-            # Installing mbedtls
-            wget https://github.com/ARMmbed/mbedtls/archive/refs/tags/v2.26.0.tar.gz
-            tar xvf v2.26.0.tar.gz
-            cd mbedtls-2.26.0
-            mkdir build && cd build
-            cmake -DENABLE_TESTING=Off ..
-            make -j`nproc`
-            make install
-            cd ../..
-            rm -rf mbedtls-2.26.0
-            rm v2.26.0.tar.gz
-            # Installing ocaml 4.11.1
-            opam init -a --disable-sandboxing
-            eval $(opam env)
-            opam update
-            opam switch create 4.11.1
-      
-          # Produce a binary artifact and place it in the mounted volume
-          run: |
-            set -ex
-            opam init -a --disable-sandboxing
-            opam update
-            opam pin add haxe . --no-action
-            opam install haxe --deps-only -y
-            opam list
-            ocamlopt -v
-            eval $(opam env)
-            opam config exec -- make -s -j`nproc` STATICLINK=1 haxe
-            ldd -v ./haxe || file ./haxe
-            cp ./haxe "/artifacts/haxe"
-      
-      - name: Get binary-repository
-        run: git clone https://github.com/Kode/${{ matrix.repo }}.git
-      - name: Copy binary
-        run: cp "${PWD}/artifacts/haxe" ${{ matrix.repo }}/haxe && git -C ${{ matrix.repo }} add haxe
-      - name: Remove old std
-        run: rm -r ${{ matrix.repo }}/std
-      - name: Copy new std
-        run: cp -R std ${{ matrix.repo }}/std
-      - name: Set name
-        run: git config --global user.name "Robbot"
-      - name: Set email
-        run: git config --global user.email "robbot2019@robdangero.us"
-      - name: Add everything
-        run: git -C ${{ matrix.repo }} add .
-      - name: Commit binary
-        id: commit
-        continue-on-error: true
-        run: git -C ${{ matrix.repo }} commit -a -m "Update Haxe binary to $GITHUB_SHA."
-      - name: Tag binary
-        if: steps.commit.outcome == 'success'
-        run: git -C ${{ matrix.repo }} tag haxe_$GITHUB_SHA
-      - name: Push binary
-        id: push1
-        if: steps.commit.outcome == 'success'
-        continue-on-error: true
-        run: git -C ${{ matrix.repo }} push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/${{ matrix.repo }}.git main --tags
-        env:
-          ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
-      - name: Pull
-        if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-        run: git -C ${{ matrix.repo }} pull --no-rebase
-      - name: Push binary again
-        if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
-        continue-on-error: true
-        run: git -C ${{ matrix.repo }} push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/${{ matrix.repo }}.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       
