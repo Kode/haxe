@@ -59,45 +59,16 @@ jobs:
       - name: Print Neko version
         run: neko -version 2>&1
       
-      - name: choco install nsis
-        uses: nick-invision/retry@v1
-        with:
-          timeout_minutes: 10
-          max_attempts: 10
-          command: choco install --no-progress nsis.portable --version 3.02 -y
-      - name: choco install things
-        shell: pwsh
-        run: choco install --no-progress curl wget 7zip.portable -y
-      - name: Prepend Chocolatey path
-        shell: pwsh
-        run: Write-Host "::add-path::C:\ProgramData\chocolatey\bin"
-      
-      - name: Install OCaml and OCaml libraries
-        shell: pwsh
-        run: |
-          Set-PSDebug -Trace 1
-          curl.exe -fsSL -o cygwin-setup.exe --retry 3 $($env:CYGWIN_SETUP)
-          Start-Process -FilePath "cygwin-setup.exe" -ArgumentList "-B -q -R $($env:CYG_ROOT) -l C:/tmp -s $($env:CYG_MIRROR) -P default -P make -P git -P zlib-devel -P rsync -P patch -P diffutils -P curl -P unzip -P tar -P m4 -P perl -P libpcre-devel -P mbedtls-devel -P mingw64-$($env:MINGW_ARCH)-zlib -P mingw64-$($env:MINGW_ARCH)-gcc-core -P mingw64-$($env:MINGW_ARCH)-pcre" -Wait
-          curl.exe -fsSL -o "opam.tar.xz" --retry 3 https://github.com/fdopen/opam-repository-mingw/releases/download/0.0.0.2/opam$($env:ARCH).tar.xz
-          curl.exe -fsSL -o "libmbedtls.tar.xz" --retry 3 https://github.com/Simn/mingw64-mbedtls/releases/download/2.16.3/mingw64-$($env:MINGW_ARCH)-mbedtls-2.16.3-1.tar.xz
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'curl -L https://cpanmin.us | perl - App::cpanminus')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cpanm IPC::System::Simple module')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cpanm String::ShellQuote')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'echo "$OLDPWD"')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && tar -C / -xvf libmbedtls.tar.xz')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && tar -xf opam.tar.xz')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && bash opam${ARCH}/install.sh')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam init mingw "https://github.com/fdopen/opam-repository-mingw.git#opam2" --comp 4.07.0+mingw${ARCH}c --switch 4.07.0+mingw${ARCH}c --auto-setup --yes 2>&1')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam update --yes 2>&1')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam pin add haxe . --kind=path --no-action --yes 2>&1')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam pin add ctypes 0.17.1 --yes 2>&1')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam install haxe --deps-only --yes 2>&1')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'opam list')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'ocamlopt -v')
-      
       - name: Expose mingw dll files
         shell: pwsh
         run: Write-Host "::add-path::${env:CYG_ROOT}/usr/$($env:MINGW_ARCH)-w64-mingw32/sys-root/mingw/bin"
+      
+      # required to be able to retrieve the revision
+      - name: Mark directory as safe
+        shell: pwsh
+        run: |
+          Set-PSDebug -Trace 1
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'git config --global --add safe.directory "$OLDPWD"')
       
       - name: Set ADD_REVISION=1 for non-release
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
@@ -110,14 +81,16 @@ jobs:
           Set-PSDebug -Trace 1
           git config --global --add safe.directory /cygdrive/d/a/haxe/haxe
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam config exec -- make -s -f Makefile.win -j`nproc` haxe 2>&1')
+          dir out
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && cygcheck ./haxe.exe')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && ls ./out')
       
       - name: Get KhaTools_windows_x64
         run: git clone https://github.com/Kode/KhaTools_windows_x64.git
       - name: Copy binary
         run: copy haxe.exe KhaTools_windows_x64\haxe.exe
       - name: Copy new std
-        run: robocopy std KhaTools_linux_x64\std /mir
+        run: robocopy std KhaTools_windows_x64\std /mir
       - name: Set name
         run: git config --global user.name "Robbot"
       - name: Set email
@@ -298,9 +271,10 @@ jobs:
       
       - name: Install dependencies
         env:
-          ZLIB_VERSION: 1.2.12
+          # For compatibility with macOS 10.13
+          ZLIB_VERSION: 1.2.13
           MBEDTLS_VERSION: 2.25.0
-          PCRE_VERSION: 10.39
+          PCRE2_VERSION: 10.42
         run: |
           set -ex
           brew uninstall openssl@1.0.2t || echo
@@ -310,6 +284,7 @@ jobs:
           brew update
           # brew unlink python@2
           brew bundle --file=tests/Brewfile --no-upgrade || brew link --overwrite awscli
+          brew install libunistring
           brew install cpanminus
           cpanm IPC::System::Simple
           cpanm String::ShellQuote
@@ -317,16 +292,20 @@ jobs:
           cd zlib-$ZLIB_VERSION
           ./configure
           make && make install
+          cd ..
           curl -L https://github.com/ARMmbed/mbedtls/archive/v$MBEDTLS_VERSION.tar.gz | tar xz
           cd mbedtls-$MBEDTLS_VERSION
           make && make install
-          curl -L https://github.com/PhilipHazel/pcre2/releases/download/pcre2-10.39/pcre2-$PCRE_VERSION.tar.gz | tar xz
-          cd pcre2-$PCRE_VERSION
-          ./configure --enable-utf8 --enable-pcre2-8 --enable-pcre2-16 --enable-pcre2-32 --enable-unicode-properties --enable-pcregrep-libz --enable-pcregrep-libbz2 --enable-jit
+          cd ..
+          curl -L https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$PCRE2_VERSION/pcre2-$PCRE2_VERSION.tar.gz | tar xz
+          cd pcre2-$PCRE2_VERSION
+          ./configure --enable-unicode --enable-pcre2-8 --enable-pcre2-16 --enable-pcre2-32 --enable-unicode-properties --enable-pcre2grep-libz --enable-pcre2grep-libbz2 --enable-jit
           make && make install
+          cd ..
       
       
       - name: Install OCaml libraries
+        if: steps.cache-opam.outputs.cache-hit != 'true'
         run: |
           set -ex
           opam init # --disable-sandboxing
@@ -348,7 +327,8 @@ jobs:
         run: |
           set -ex
           eval $(opam env)
-          opam config exec -- make -s -j`sysctl -n hw.ncpu` STATICLINK=1 "LIB_PARAMS=/usr/local/lib/libz.a /usr/local/lib/libpcre.a /usr/local/lib/libmbedtls.a /usr/local/lib/libmbedcrypto.a /usr/local/lib/libmbedx509.a -cclib '-framework Security -framework CoreFoundation'" haxe
+          opam config exec -- make -s -j`sysctl -n hw.ncpu` STATICLINK=1 "LIB_PARAMS=/usr/local/lib/libz.a /usr/local/lib/libpcre2-8.a /usr/local/lib/libmbedtls.a /usr/local/lib/libmbedcrypto.a /usr/local/lib/libmbedx509.a -cclib '-framework Security -framework CoreFoundation'" haxe
+          ls -l out
           otool -L ./haxe
       
       - name: Get KhaTools_macos

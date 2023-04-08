@@ -64,10 +64,16 @@
   run: git clone https://github.com/Kode/KhaTools_macos.git
 - name: Copy binary
   run: cp ./haxe KhaTools_macos/haxe
+- name: Remove old std
+  run: rm -r KhaTools_macos/std
+- name: Copy new std
+  run: cp -R std KhaTools_macos/std
 - name: Set name
   run: git config --global user.name "Robbot"
 - name: Set email
   run: git config --global user.email "robbot2019@robdangero.us"
+- name: Add everything
+  run: git -C KhaTools_macos add .
 - name: Commit binary
   id: commit
   continue-on-error: true

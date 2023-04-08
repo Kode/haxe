@@ -28,12 +28,14 @@
   run: git clone https://github.com/Kode/KhaTools_windows_x64.git
 - name: Copy binary
   run: copy haxe.exe KhaTools_windows_x64\haxe.exe
+- name: Copy new std
+  run: robocopy std KhaTools_windows_x64\std /mir
 - name: Set name
   run: git config --global user.name "Robbot"
 - name: Set email
   run: git config --global user.email "robbot2019@robdangero.us"
-- name: Add binary
-  run: git -C KhaTools_windows_x64 add "haxe.exe"
+- name: Add everything
+  run: git -C KhaTools_windows_x64 add .
 - name: Commit binary
   id: commit
   continue-on-error: true
