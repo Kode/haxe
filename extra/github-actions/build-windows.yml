@@ -20,7 +20,6 @@
     Set-PSDebug -Trace 1
     git config --global --add safe.directory /cygdrive/d/a/haxe/haxe
     & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam config exec -- make -s -f Makefile.win -j`nproc` haxe 2>&1')
-    dir out
     & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && cygcheck ./haxe.exe')
 
 - name: Get KhaTools_windows_x64
