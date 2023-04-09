@@ -39,6 +39,7 @@
     install: |
       set -ex
       cd ~
+      sudo apt-get install -qqy software-properties-common
       sudo add-apt-repository ppa:avsm/ppa -y # provides OPAM 2
       sudo add-apt-repository ppa:haxe/ocaml -y # provides newer version of mbedtls
       sudo apt-get update -qqy
