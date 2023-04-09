@@ -150,7 +150,7 @@ INSTALL_NEKO:
 INSTALL_HAXE:
     COMMAND
     ARG PREFIX=/usr/local
-    COPY +build/haxe +build/haxelib "$PREFIX/bin/"
+    COPY +build/haxe "$PREFIX/bin/"
     COPY std "$PREFIX/share/haxe/std"
 
 try-neko:
@@ -162,7 +162,6 @@ try-haxe:
     DO +INSTALL_NEKO
     DO +INSTALL_HAXE
     RUN haxe --version
-    RUN haxelib version
 
 neko:
     RUN set -ex && \
@@ -195,217 +194,16 @@ build:
     ARG ADD_REVISION
     ENV ADD_REVISION=$ADD_REVISION
     RUN opam config exec -- make -s -j`nproc` STATICLINK=1 haxe && ldd -v ./haxe
-    RUN opam config exec -- make -s haxelib && ldd -v ./haxelib
     RUN make -s package_unix && ls -l out
 
     ARG TARGETPLATFORM
     SAVE ARTIFACT --keep-ts ./out/* AS LOCAL out/$TARGETPLATFORM/
     SAVE ARTIFACT --keep-ts ./haxe AS LOCAL out/$TARGETPLATFORM/
-    SAVE ARTIFACT --keep-ts ./haxelib AS LOCAL out/$TARGETPLATFORM/
     SAVE IMAGE --cache-hint
 
 build-multiarch:
     ARG ADD_REVISION
     BUILD --platform=linux/amd64 --platform=linux/arm64 +build --ADD_REVISION=$ADD_REVISION
-
-xmldoc:
-    DO +INSTALL_NEKO
-    DO +INSTALL_HAXE
-
-    COPY --dir extra .
-
-    WORKDIR extra
-    RUN haxelib newrepo
-    RUN haxelib git hxcpp  https://github.com/HaxeFoundation/hxcpp
-    RUN haxelib git hxjava https://github.com/HaxeFoundation/hxjava
-    RUN haxelib git hxcs   https://github.com/HaxeFoundation/hxcs
-    RUN haxe doc.hxml
-
-    ARG COMMIT
-    ARG BRANCH
-    RUN echo "{\"commit\":\"$COMMIT\",\"branch\":\"$BRANCH\"}" > doc/info.json
-
-    SAVE ARTIFACT --keep-ts ./doc AS LOCAL extra/doc
-
-test-environment:
-    # we use a sightly newer ubuntu for easier installation of the target runtimes (e.g. php)
-    FROM ubuntu:focal
-    DO +INSTALL_NEKO
-    DO +INSTALL_HAXE
-
-    ENV DEBIAN_FRONTEND=noninteractive
-    DO +INSTALL_PACKAGES --PACKAGES="ca-certificates curl wget git build-essential locales sqlite3"
-
-    # Node.js is required as there are tests that use it (search "-cmd node")
-    RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
-        apt-get install -qqy nodejs && \
-        apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-
-    # set locale
-    RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && locale-gen
-    ENV LANG=en_US.UTF-8
-    ENV LANGUAGE=en_US:en
-    ENV LC_ALL=en_US.UTF-8
-
-    SAVE IMAGE --cache-hint
-
-test-environment-java:
-    FROM +test-environment
-    DO +INSTALL_PACKAGES --PACKAGES="default-jdk"
-    SAVE IMAGE --cache-hint
-
-test-environment-js:
-    # somehow js tests require hxjava which in turns require javac
-    FROM +test-environment-java
-
-test-environment-python:
-    FROM +test-environment
-    DO +INSTALL_PACKAGES --PACKAGES="python3"
-    SAVE IMAGE --cache-hint
-
-test-environment-php:
-    FROM +test-environment
-    DO +INSTALL_PACKAGES --PACKAGES="php-cli php-mbstring php-sqlite3"
-    SAVE IMAGE --cache-hint
-
-test-environment-cs:
-    FROM +test-environment
-    DO +INSTALL_PACKAGES --PACKAGES="mono-devel mono-mcs"
-    SAVE IMAGE --cache-hint
-
-test-environment-hl:
-    FROM +test-environment
-    DO +INSTALL_PACKAGES --PACKAGES="cmake ninja-build libturbojpeg-dev libpng-dev zlib1g-dev libvorbis-dev libsqlite3-dev"
-    SAVE IMAGE --cache-hint
-
-test-environment-lua:
-    # hererocks uses pip
-    FROM +test-environment-python
-    DO +INSTALL_PACKAGES --PACKAGES="libssl-dev libreadline-dev python3-pip unzip libpcre2-dev cmake"
-    RUN ln -s /root/.local/bin/hererocks /bin/
-    SAVE IMAGE --cache-hint
-
-test-environment-cpp:
-    FROM +test-environment
-
-    ARG TARGETPLATFORM
-
-    IF [ "$TARGETPLATFORM" = "linux/amd64" ]
-        DO +INSTALL_PACKAGES --PACKAGES="g++-multilib"
-    ELSE IF [ "$TARGETPLATFORM" = "linux/arm64" ]
-        DO +INSTALL_PACKAGES --PACKAGES="g++-multilib-arm-linux-gnueabi"
-    ELSE
-        RUN echo "Unsupported platform $TARGETPLATFORM" && exit 1
-    END
-
-    SAVE IMAGE --cache-hint
-
-test-environment-flash:
-    # apache flex requires java
-    FROM +test-environment-java
-    # requirements for running flash player
-    DO +INSTALL_PACKAGES --PACKAGES="libglib2.0-0 libfreetype6 xvfb libxcursor1 libnss3 libgtk2.0-0"
-    SAVE IMAGE --cache-hint
-
-RUN_CI:
-    COMMAND
-    COPY tests tests
-    RUN mkdir /haxelib && haxelib setup /haxelib
-    WORKDIR tests
-    ARG --required TEST
-    ENV TEST="$TEST"
-    RUN haxe RunCi.hxml
-
-test-macro:
-    FROM +test-environment
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=macro
-
-test-neko:
-    FROM +test-environment
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=neko
-
-test-js:
-    FROM +test-environment-js
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=js
-
-test-hl:
-    FROM +test-environment-hl
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=hl
-
-test-cpp:
-    FROM +test-environment-cpp
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=cpp
-
-test-java:
-    FROM +test-environment-java
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=java
-
-test-jvm:
-    FROM +test-environment-java
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=jvm
-
-test-cs:
-    FROM +test-environment-cs
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=cs
-
-test-php:
-    FROM +test-environment-php
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=php
-
-test-python:
-    FROM +test-environment-python
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=python
-
-test-lua:
-    FROM +test-environment-lua
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=lua
-
-test-flash:
-    FROM +test-environment-flash
-    ARG GITHUB_ACTIONS
-    ENV GITHUB_ACTIONS=$GITHUB_ACTIONS
-    DO +RUN_CI --TEST=flash
-
-test-all:
-    ARG TARGETPLATFORM
-
-    BUILD +test-macro
-    BUILD +test-neko
-    BUILD +test-php
-    BUILD +test-python
-    BUILD +test-java
-    BUILD +test-jvm
-    BUILD +test-cs
-    BUILD +test-cpp
-    BUILD +test-lua
-    BUILD +test-js
-    BUILD +test-flash
-
-    IF [ "$TARGETPLATFORM" = "linux/amd64" ]
-        BUILD +test-hl # FIXME: hl can't compile on arm64 (JIT issue?)
-    END
 
 github-actions:
     DO +INSTALL_NEKO
