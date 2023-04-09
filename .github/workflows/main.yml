@@ -317,6 +317,7 @@ jobs:
           install: |
             set -ex
             cd ~
+            apt-get install -qqy software-properties-common
             add-apt-repository ppa:avsm/ppa -y # provides OPAM 2
             add-apt-repository ppa:haxe/ocaml -y # provides newer version of mbedtls
             apt-get update -qqy
