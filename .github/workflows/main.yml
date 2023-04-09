@@ -317,11 +317,10 @@ jobs:
           install: |
             set -ex
             cd ~
-            sudo apt-get install -qqy software-properties-common
-            sudo add-apt-repository ppa:avsm/ppa -y # provides OPAM 2
-            sudo add-apt-repository ppa:haxe/ocaml -y # provides newer version of mbedtls
-            sudo apt-get update -qqy
-            sudo apt-get install -qqy ocaml-nox camlp5 opam libpcre2-dev zlib1g-dev libgtk2.0-dev libmbedtls-dev ninja-build libstring-shellquote-perl libipc-system-simple-perl
+            add-apt-repository ppa:avsm/ppa -y # provides OPAM 2
+            add-apt-repository ppa:haxe/ocaml -y # provides newer version of mbedtls
+            apt-get update -qqy
+            apt-get install -qqy ocaml-nox camlp5 opam libpcre2-dev zlib1g-dev libgtk2.0-dev libmbedtls-dev ninja-build libstring-shellquote-perl libipc-system-simple-perl
             opam init # --disable-sandboxing
             opam update
             opam pin add haxe . --no-action
