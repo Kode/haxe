@@ -172,6 +172,44 @@ jobs:
           EARTHLY_PUSH: "${{ github.event_name == 'push' }}"
           EARTHLY_REMOTE_CACHE: "ghcr.io/${{env.CONTAINER_REG}}_cache:build-${{env.CONTAINER_TAG}}-arm64"
 
+      - name: Get KhaTools_linux_arm64
+        run: git clone https://github.com/Kode/KhaTools_linux_arm64.git
+      - name: Copy binary
+        run: cp ./haxe KhaTools_linux_arm64/haxe
+      - name: Remove old std
+        run: rm -r KhaTools_linux_arm64/std
+      - name: Copy new std
+        run: cp -R std KhaTools_linux_arm64/std
+      - name: Set name
+        run: git config --global user.name "Robbot"
+      - name: Set email
+        run: git config --global user.email "robbot2019@robdangero.us"
+      - name: Add everything
+        run: git -C KhaTools_linux_arm64 add .
+      - name: Commit binary
+        id: commit
+        continue-on-error: true
+        run: git -C KhaTools_linux_arm64 commit -a -m "Update Haxe binary to $GITHUB_SHA."
+      - name: Tag binary
+        if: steps.commit.outcome == 'success'
+        run: git -C KhaTools_linux_arm64 tag haxe_$GITHUB_SHA
+      - name: Push binary
+        id: push1
+        if: steps.commit.outcome == 'success'
+        continue-on-error: true
+        run: git -C KhaTools_linux_arm64 push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_linux_arm64.git main --tags
+        env:
+          ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
+      - name: Pull
+        if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
+        run: git -C KhaTools_linux_arm64 pull --no-rebase
+      - name: Push binary again
+        if: steps.commit.outcome == 'success' && steps.push1.outcome != 'success'
+        continue-on-error: true
+        run: git -C KhaTools_linux_arm64 push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_linux_arm64.git main --tags
+        env:
+          ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
+
   mac-build:
     runs-on: macos-latest
     env:
