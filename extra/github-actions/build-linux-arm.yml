@@ -39,50 +39,25 @@
     install: |
       set -ex
       cd ~
-      apt-get update -y -q
-      apt-get upgrade -y -q
-      apt-get install -y -q build-essential m4 unzip libpcre3-dev zlib1g-dev neko git pkg-config libipc-system-simple-perl libstring-shellquote-perl wget cmake python3
-      # Installing OPAM
-      apt-get install -y -q ocaml \
-        && wget https://github.com/ocaml/opam/releases/download/2.0.8/opam-full-2.0.8.tar.gz \
-        && tar xvf opam-full-2.0.8.tar.gz \
-        && cd opam-full-2.0.8 \
-        && ./configure \
-        && make lib-ext \
-        && make \
-        && make install \
-        && cd .. \
-        && rm -rf opam-full*
-      # Installing mbedtls
-      wget https://github.com/ARMmbed/mbedtls/archive/refs/tags/v2.26.0.tar.gz
-      tar xvf v2.26.0.tar.gz
-      cd mbedtls-2.26.0
-      mkdir build && cd build
-      cmake -DENABLE_TESTING=Off ..
-      make -j`nproc`
-      make install
-      cd ../..
-      rm -rf mbedtls-2.26.0
-      rm v2.26.0.tar.gz
-      # Installing ocaml 4.11.1
-      opam init -a --disable-sandboxing
-      eval $(opam env)
+      sudo add-apt-repository ppa:avsm/ppa -y # provides OPAM 2
+      sudo add-apt-repository ppa:haxe/ocaml -y # provides newer version of mbedtls
+      sudo apt-get update -qqy
+      sudo apt-get install -qqy ocaml-nox camlp5 opam libpcre2-dev zlib1g-dev libgtk2.0-dev libmbedtls-dev ninja-build libstring-shellquote-perl libipc-system-simple-perl
+      opam init # --disable-sandboxing
       opam update
-      opam switch create 4.11.1
+      opam pin add haxe . --no-action
+      opam install haxe --deps-only --assume-depexts
+      opam list
+      ocamlopt -v
 
     # Produce a binary artifact and place it in the mounted volume
     run: |
       set -ex
-      opam init -a --disable-sandboxing
-      opam update
-      opam pin add haxe . --no-action
-      opam install haxe --deps-only -y
-      opam list
-      ocamlopt -v
       eval $(opam env)
       opam config exec -- make -s -j`nproc` STATICLINK=1 haxe
-      ldd -v ./haxe || file ./haxe
-      cp ./haxe "/artifacts/haxe"
+      make -s package_unix
+      ls -l out
+      ldd -v ./haxe
 
 - name: Get binary-repository
   run: git clone https://github.com/Kode/${{ matrix.repo }}.git
