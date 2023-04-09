@@ -57,7 +57,8 @@
       opam config exec -- make -s -j`nproc` STATICLINK=1 haxe
       make -s package_unix
       ls -l out
-      ldd -v ./haxe
+      ldd -v ./haxe || file ./haxe
+      cp ./haxe "/artifacts/haxe"
 
 - name: Get binary-repository
   run: git clone https://github.com/Kode/${{ matrix.repo }}.git
