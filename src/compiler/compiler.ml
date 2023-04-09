@@ -562,7 +562,7 @@ module HighLevel = struct
 				| _ ->
 					loop (arg :: acc) l
 		and loop_lib arg dir lib acc args =
-			loop (dir :: arg :: acc) ("-lib" :: lib :: args)
+			loop (dir :: arg :: acc)
 		in
 		let args,ctx = loop [] pl in
 		args,!server_mode,ctx
