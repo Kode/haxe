@@ -33,12 +33,22 @@ jobs:
     env:
       PLATFORM: linux64
       OPAMYES: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        ocaml: ["4.08.1", "5.0.0"]
     steps:
       - uses: actions/checkout@main
         with:
           submodules: recursive
 
-      @import cache-opam.yml
+      - name: Cache opam
+        id: cache-opam
+        uses: actions/cache@v3.0.11
+        with:
+          path: ~/.opam/
+          key: ${{ runner.os }}-${{ matrix.ocaml }}-${{ hashFiles('./haxe.opam', './libs/') }}
+
       @import install-neko-unix.yml
 
       - name: Install dependencies
@@ -55,6 +65,7 @@ jobs:
           set -ex
           opam init # --disable-sandboxing
           opam update
+          opam switch create ${{ matrix.ocaml }}
           opam pin add haxe . --no-action
           opam install haxe --deps-only --assume-depexts
           opam list
@@ -210,6 +221,12 @@ jobs:
         with:
           submodules: recursive
 
-      @import cache-opam.yml
+      - name: Cache opam
+        id: cache-opam
+        uses: actions/cache@v3.0.11
+        with:
+          path: ~/.opam/
+          key: ${{ runner.os }}-${{ hashFiles('./haxe.opam', './libs/') }}
+
       @import install-neko-unix.yml
       @import build-mac.yml
