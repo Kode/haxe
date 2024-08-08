@@ -346,7 +346,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-13]
+        os: [macos-13]
     runs-on: ${{ matrix.os }}
     env:
       PLATFORM: mac${{ matrix.os == 'macos-14' && '-arm64' || '' }}
