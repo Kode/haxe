@@ -224,7 +224,7 @@ module Setup = struct
 		Common.define_value com Define.Dce "std";
 		com.info <- (fun ?(depth=0) msg p -> message ctx (make_compiler_message msg p depth DKCompilerMessage Information));
 		com.warning <- (fun ?(depth=0) w options msg p ->
-			match Warning.get_mode w (com.warning_options @ options) with
+			match Warning.get_mode w (options @ com.warning_options) with
 			| WMEnable ->
 				let wobj = Warning.warning_obj w in
 				let msg = if wobj.w_generic then

@@ -837,7 +837,7 @@ let create compilation_step cs version args =
 		get_macros = (fun() -> None);
 		info = (fun ?depth _ _ -> die "" __LOC__);
 		warning = (fun ?depth _ _ _ -> die "" __LOC__);
-		warning_options = [];
+		warning_options = [List.map (fun w -> {wo_warning = w;wo_mode = WMDisable}) WarningList.disabled_warnings];
 		error = (fun ?depth _ _ -> die "" __LOC__);
 		located_error = (fun ?depth _ -> die "" __LOC__);
 		get_messages = (fun() -> []);
