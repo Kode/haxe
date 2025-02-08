@@ -477,7 +477,7 @@ let convert_and_validate k =
 	if List.mem converted_flag reserved_flags then
 		raise_reserved (Printf.sprintf "`%s` is a reserved compiler flag" k);
 	List.iter (fun ns ->
-		if ExtString.String.starts_with converted_flag (ns ^ ".") then
+		if ExtString.String.starts_with converted_flag ~prefix:(ns ^ ".") then
 			raise_reserved (Printf.sprintf "`%s` uses the reserved compiler flag namespace `%s.*`" k ns)
 	) reserved_flag_namespaces;
 	converted_flag

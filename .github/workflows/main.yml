@@ -262,7 +262,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ocaml: ["4.08.1", "5.0.0"]
+        ocaml: ["4.08.1", "5.3.0"]
     steps:
       - uses: actions/checkout@main
         with:
@@ -351,7 +351,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linuxBinaries${{ (matrix.ocaml == '5.0.0' && '_ocaml5') || '' }}
+          name: linuxBinaries${{ (matrix.ocaml == '5.3.0' && '_ocaml5') || '' }}
           path: out
 
       - name: Upload xmldoc artifact
@@ -372,7 +372,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ocaml: ["4.08.1", "5.0.0"]
+        ocaml: ["4.08.1", "5.3.0"]
         target: [macro, js, hl, cpp, 'java,jvm', cs, php, python, lua, flash, neko]
         include:
           - target: hl
@@ -389,7 +389,7 @@ jobs:
           submodules: recursive
       - uses: actions/download-artifact@v4
         with:
-          name: linuxBinaries${{ (matrix.ocaml == '5.0.0' && '_ocaml5') || '' }}
+          name: linuxBinaries${{ (matrix.ocaml == '5.3.0' && '_ocaml5') || '' }}
           path: linuxBinaries
 
       - name: Install Neko from S3

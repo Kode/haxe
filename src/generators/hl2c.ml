@@ -104,7 +104,7 @@ let keywords =
 	List.iter (fun i -> Hashtbl.add h i ()) c_kwds;
 	h
 
-let ident i = if (Hashtbl.mem keywords i) || (ExtString.String.starts_with i "__") then "_hx_" ^ i else i
+let ident i = if (Hashtbl.mem keywords i) || (ExtString.String.starts_with i ~prefix:"__") then "_hx_" ^ i else i
 
 let s_comp = function
 	| CLt -> "<"
@@ -1332,7 +1332,7 @@ let make_modules ctx all_types =
 	) !all_modules;
 	let contexts = ref PMap.empty in
 	Array.iter (fun f ->
-		if f.fe_module = None && ExtString.String.starts_with f.fe_name "fun$" then f.fe_name <- "wrap" ^ type_name ctx (match f.fe_decl with None -> Globals.die "" __LOC__ | Some f -> f.ftype);
+		if f.fe_module = None && ExtString.String.starts_with f.fe_name ~prefix:"fun$" then f.fe_name <- "wrap" ^ type_name ctx (match f.fe_decl with None -> Globals.die "" __LOC__ | Some f -> f.ftype);
 		(* assign context to function module *)
 		match f.fe_args with
 		| (HEnum e) as t :: _ when e.ename = "" ->
