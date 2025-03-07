@@ -1,3 +1,19 @@
+2025-03-XX 4.3.7
+
+	General improvements:
+
+	all : use -w rules instead of defines to configure warnings (#11826, #12013)
+
+	Bugfixes:
+
+	all : fix compiler hanging issue (#11820)
+	all : local statics fixes (#11803, #11849)
+	macro : local statics vs ExprTools.map (#12030)
+	eval : https fixes (mbedtls update) (#11646)
+	eval : ssl cert verification failures on windows (#11838)
+	hl/c : fix comparison of HArray,HArray and HBytes,HBytes (#11610)
+	cppia : generate scriptable functions for overriden functions (#11773)
+
 2024-08-07 4.3.6
 
 	Bugfixes:
