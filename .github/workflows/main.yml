@@ -165,31 +165,21 @@ jobs:
       - name: Setup ocaml
         id: ocaml
         continue-on-error: true
-        uses: kLabz/setup-ocaml@win32
+        uses: klabz/setup-ocaml@win32-2025-2
         with:
-          ocaml-compiler: 4.08.1
-          opam-depext: false
-          opam-repositories: |
-            opam-repository-mingw: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
-            default: https://github.com/ocaml/opam-repository.git
+          ocaml-compiler: 4.14.0
           opam-local-packages: |
             haxe.opam
-          cache-prefix: w32-v1
 
       # TODO make it work on first try
       # (when cygwin cache doesn't exist, ocaml install fails with a curl error)
       - name: Setup ocaml (second chance)
         if: steps.ocaml.outcome == 'failure'
-        uses: kLabz/setup-ocaml@win32
+        uses: klabz/setup-ocaml@win32-2025-2
         with:
-          ocaml-compiler: 4.08.1
-          opam-depext: false
-          opam-repositories: |
-            opam-repository-mingw: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
-            default: https://github.com/ocaml/opam-repository.git
+          ocaml-compiler: 4.14.0
           opam-local-packages: |
             haxe.opam
-          cache-prefix: w32-v1
 
       - name: Install dependencies
         shell: pwsh
@@ -206,8 +196,17 @@ jobs:
         shell: pwsh
         run: |
           Set-PSDebug -Trace 1
+          opam install ocaml-env-mingw32
+          opam install conf-mingw-w64-pcre2-i686
           opam install haxe --deps-only
           opam list
+
+      - name: Check mingw dll files
+        shell: bash
+        run: |
+          ls "$CYG_ROOT/usr/"
+          echo "bin/"
+          ls "$CYG_ROOT/usr/i686-w64-mingw32/sys-root/mingw/bin/"
 
       - name: Expose mingw dll files
         shell: pwsh
@@ -229,10 +228,10 @@ jobs:
         shell: pwsh
         run: |
           Set-PSDebug -Trace 1
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam config exec -- make -s -f Makefile.win -j`nproc` haxe 2>&1')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam config exec -- make -s -f Makefile.win haxelib 2>&1')
-          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam config exec -- make -f Makefile.win echo_package_files package_bin package_installer_win package_choco 2>&1')
-          dir out
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam config exec -- make -s -f Makefile.win32 -j`nproc` haxe 2>&1')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam config exec -- make -s -f Makefile.win32 haxelib 2>&1')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && file ./haxe.exe')
+          & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && opam config exec -- make -f Makefile.win32 echo_package_files package_bin package_installer_win package_choco 2>&1')
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && cygcheck ./haxe.exe')
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && cygcheck ./haxelib.exe')
           & "$($env:CYG_ROOT)/bin/bash.exe" @('-lc', 'cd "$OLDPWD" && ls ./out')
