@@ -258,7 +258,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ocaml: ["4.08.1", "5.3.0"]
+        ocaml: ["4.14.0", "5.3.0"]
     steps:
       - uses: actions/checkout@main
         with:
@@ -333,7 +333,7 @@ jobs:
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
 
       - name: Build xmldoc
-        if: matrix.ocaml == '4.08.1'
+        if: matrix.ocaml == '4.14.0'
         run: |
           set -ex
           make -s xmldoc
@@ -352,7 +352,7 @@ jobs:
 
       - name: Upload xmldoc artifact
         uses: actions/upload-artifact@v4
-        if: matrix.ocaml == '4.08.1'
+        if: matrix.ocaml == '4.14.0'
         with:
           name: xmldoc
           path: extra/doc
@@ -368,7 +368,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ocaml: ["4.08.1", "5.3.0"]
+        ocaml: ["4.14.0", "5.3.0"]
         target: [macro, js, hl, cpp, 'java,jvm', cs, php, python, lua, flash, neko]
         include:
           - target: hl
