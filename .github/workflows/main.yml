@@ -60,9 +60,6 @@ jobs:
           opam-local-packages: |
             haxe.opam
 
-      - name: Pin camlp5 Version
-        run: opam pin add camlp5 7.14 -y
-
       - name: Install dependencies
         shell: pwsh
         run: |
