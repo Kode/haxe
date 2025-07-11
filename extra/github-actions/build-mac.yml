@@ -51,8 +51,12 @@
     opam config exec -- make -s -j`sysctl -n hw.ncpu` STATICLINK=1 "LIB_PARAMS=/usr/local/lib/libz.a /usr/local/lib/libpcre2-8.a /usr/local/lib/libmbedtls.a /usr/local/lib/libmbedcrypto.a /usr/local/lib/libmbedx509.a -cclib '-framework Security -framework CoreFoundation'" haxe
     otool -L ./haxe
 
-- name: Get KhaTools_macos
-  run: git clone https://github.com/Kode/KhaTools_macos.git
+- name: Get KhaTools_macos_x64
+  if: runner.arch == 'X64'
+  run: git clone https://github.com/Kode/KhaTools_macos_x64.git KhaTools_macos
+- name: Get KhaTools_macos_arm64
+  if: runner.arch == 'ARM64'
+  run: git clone https://github.com/Kode/KhaTools_macos_arm64.git KhaTools_macos
 - name: Copy binary
   run: cp ./haxe KhaTools_macos/haxe
 - name: Remove old std
@@ -74,19 +78,32 @@
   continue-on-error: true
   if: steps.commit.outcome == 'success'
   run: git -C KhaTools_macos tag haxe_$GITHUB_SHA
-- name: Push binary
+- name: Push x64 binary
   id: push1
-  if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success'
+  if: runner.arch == 'X64' && steps.commit.outcome == 'success' && steps.tag.outcome == 'success'
   continue-on-error: true
-  run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos.git main --tags
+  run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos_x64.git main --tags
+  env:
+    ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
+- name: Push arm64 binary
+  id: push1
+  if: runner.arch == 'ARM64' && steps.commit.outcome == 'success' && steps.tag.outcome == 'success'
+  continue-on-error: true
+  run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos_arm64.git main --tags
   env:
     ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
 - name: Pull
   if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
   run: git -C KhaTools_macos pull --no-rebase
-- name: Push binary again
-  if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
+- name: Push x64 binary again
+  if: runner.arch == 'X64' && steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
   continue-on-error: true
-  run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos.git main --tags
+  run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos_x64.git main --tags
+  env:
+    ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
+- name: Push arm64 binary again
+  if: runner.arch == 'ARM64' && steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
+  continue-on-error: true
+  run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos_arm64.git main --tags
   env:
     ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
