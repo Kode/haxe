@@ -466,30 +466,33 @@ jobs:
         if: steps.commit.outcome == 'success'
         run: git -C KhaTools_macos tag haxe_$GITHUB_SHA
       - name: Push x64 binary
-        id: push1
+        id: push_x64
         if: runner.arch == 'X64' && steps.commit.outcome == 'success' && steps.tag.outcome == 'success'
         continue-on-error: true
         run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos_x64.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Push arm64 binary
-        id: push1
+        id: push_arm64
         if: runner.arch == 'ARM64' && steps.commit.outcome == 'success' && steps.tag.outcome == 'success'
         continue-on-error: true
         run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos_arm64.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
-      - name: Pull
-        if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
+      - name: Pull x64
+        if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push_x64.outcome != 'success'
+        run: git -C KhaTools_macos pull --no-rebase
+      - name: Pull arm64
+        if: steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push_arm64.outcome != 'success'
         run: git -C KhaTools_macos pull --no-rebase
       - name: Push x64 binary again
-        if: runner.arch == 'X64' && steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
+        if: runner.arch == 'X64' && steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push_x64.outcome != 'success'
         continue-on-error: true
         run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos_x64.git main --tags
         env:
           ROBBOT_PASS: ${{ secrets.ROBBOT_PASS }}
       - name: Push arm64 binary again
-        if: runner.arch == 'ARM64' && steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push1.outcome != 'success'
+        if: runner.arch == 'ARM64' && steps.commit.outcome == 'success' && steps.tag.outcome == 'success' && steps.push_arm64.outcome != 'success'
         continue-on-error: true
         run: git -C KhaTools_macos push https://Kode-Robbot:$ROBBOT_PASS@github.com/Kode/KhaTools_macos_arm64.git main --tags
         env:
