@@ -320,7 +320,7 @@ jobs:
       - name: Get KhaTools_linux_arm64
         run: git clone https://github.com/Kode/KhaTools_linux_arm64.git
       - name: Copy binary
-        run: cp ./out/linux/arm64/haxe KhaTools_linux_arm64/haxe
+        run: cp ./haxe KhaTools_linux_arm64/haxe
       - name: Remove old std
         run: rm -r KhaTools_linux_arm64/std
       - name: Copy new std
