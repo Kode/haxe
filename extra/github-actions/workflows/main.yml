@@ -166,11 +166,9 @@ jobs:
           set -ex
           eval $(opam env)
           opam config exec -- make -s -j`nproc` STATICLINK=1 haxe
-          opam config exec -- make -s haxelib
           make -s package_unix
           ls -l out
           ldd -v ./haxe
-          ldd -v ./haxelib
 
       - name: Get KhaTools_linux_arm64
         run: git clone https://github.com/Kode/KhaTools_linux_arm64.git
