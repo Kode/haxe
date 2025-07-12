@@ -51,12 +51,9 @@ jobs:
         run: neko -version 2>&1
 
       - name: Setup ocaml
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@3d85bf33a66e089149cd1e9c75da7b9cb6d9d3a7
         with:
-          ocaml-compiler: 4.08.1
-          opam-repositories: |
-            opam-repository-mingw: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
-            default: https://github.com/ocaml/opam-repository.git
+          ocaml-compiler: 4.14.0
           opam-local-packages: |
             haxe.opam
 
@@ -143,14 +140,14 @@ jobs:
 
 
   linux-build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       PLATFORM: linux64
       OPAMYES: 1
     strategy:
       fail-fast: false
       matrix:
-        ocaml: ["4.08.1"]
+        ocaml: ["4.14.0", "5.3.0"]
     steps:
       - uses: actions/checkout@main
         with:
@@ -186,10 +183,10 @@ jobs:
       - name: Install dependencies
         run: |
           set -ex
-          sudo add-apt-repository ppa:avsm/ppa -y # provides OPAM 2
-          sudo add-apt-repository ppa:haxe/ocaml -y # provides newer version of mbedtls
           sudo apt-get update -qqy
-          sudo apt-get install -qqy ocaml-nox camlp5 opam libpcre2-dev zlib1g-dev libgtk2.0-dev libmbedtls-dev ninja-build libstring-shellquote-perl libipc-system-simple-perl
+          sudo apt-get install -qqy darcs bubblewrap ocaml-nox libpcre2-dev zlib1g-dev libgtk2.0-dev libmbedtls-dev ninja-build libstring-shellquote-perl libipc-system-simple-perl
+          curl -sSL https://github.com/ocaml/opam/releases/download/2.3.0/opam-2.3.0-x86_64-linux -o $RUNNER_TEMP/opam
+          sudo install $RUNNER_TEMP/opam /usr/local/bin/opam
 
       - name: Install OCaml libraries
         if: steps.cache-opam.outputs.cache-hit != 'true'
